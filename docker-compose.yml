@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Primary Local PIA (Privacy Impact Assessment & Governance Engine) Server
+  local-pia-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: local-pia-app:latest
+    container_name: local-pia-app-server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DB_PATH: /app/data/dpdpa_assessment.db
+      OLLAMA_ENDPOINT: ${OLLAMA_ENDPOINT:-http://host.docker.internal:11434/api/generate}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      LM_STUDIO_ENDPOINT: ${LM_STUDIO_ENDPOINT:-}
+      ANYTHING_LLM_ENDPOINT: ${ANYTHING_LLM_ENDPOINT:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/server/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Optional PostgreSQL Container (Enterprise Relational Audit Store)
+  dpdpa-postgres:
+    image: postgres:16-alpine
+    container_name: dpdpa-postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dpdpa_db
+      POSTGRES_USER: dpdpa_admin
+      POSTGRES_PASSWORD: dpdpa_secure_password_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dpdpa_admin -d dpdpa_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+

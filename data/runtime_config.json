@@ -1,0 +1,40 @@
+{
+  "appInstance": 1,
+  "loopbackIp": "127.0.0.1",
+  "host": "0.0.0.0",
+  "port": 3000,
+  "dbPath": "/app/applet/data/pia_store.json",
+  "ollamaEndpoint": "http://localhost:8080/v1/chat/completions",
+  "ollamaModel": "llama3",
+  "lmStudioEndpoint": "http://localhost:1234/v1/chat/completions",
+  "anythingLlmEndpoint": "http://localhost:3001/api/v1",
+  "autoDiscoverOnStartup": true,
+  "discoveredServices": [
+    {
+      "name": "Ollama Local AI",
+      "url": "http://localhost:11434/api/tags",
+      "status": "offline",
+      "type": "Local REST"
+    },
+    {
+      "name": "LM Studio OpenAI Compat",
+      "url": "http://localhost:1234/v1/models",
+      "status": "offline",
+      "type": "Local REST"
+    },
+    {
+      "name": "Anything LLM Local API",
+      "url": "http://localhost:3001/api/v1/auth",
+      "status": "offline",
+      "type": "Local REST"
+    },
+    {
+      "name": "LocalAI Container Engine",
+      "url": "http://localhost:8080/v1/models",
+      "status": "online",
+      "type": "Local REST",
+      "latencyMs": 12
+    }
+  ],
+  "lastScanTimestamp": "2026-07-25T19:06:49.654Z"
+}
