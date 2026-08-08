@@ -84,7 +84,7 @@ It integrates an **ICO/UK GDPR / EU GDPR quantitative risk matrix**, **7 industr
 
 ---
 
-## 🏗️ Architecture Overview (from `PROMPT.md`)
+## 🏗️ Architecture Overview 
 
 ```
                         ┌─────────────────────────────────────────┐
