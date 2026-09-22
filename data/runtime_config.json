@@ -9,6 +9,22 @@
   "lmStudioEndpoint": "http://localhost:1234/v1/chat/completions",
   "anythingLlmEndpoint": "http://localhost:3001/api/v1",
   "autoDiscoverOnStartup": true,
+  "systemSetup": {
+    "organizationName": "Enterprise Governance & Healthcare Trust",
+    "dataProtectionContact": "Amit Kumar Pandey",
+    "dpoEmail": "dpo.lead@enterprise-governance.org",
+    "defaultDepartment": "Data Protection & Compliance Office",
+    "industrySector": "banking",
+    "primaryRegulatoryFramework": "UK GDPR & DPA 2018",
+    "fidPrefix": "PIA-FE-2026-",
+    "fidOffset": 100,
+    "bidPrefix": "PIA-BE-UK-2026-",
+    "bidOffset": 412,
+    "defaultAuditorName": "Amit Kumar Pandey (DPO)",
+    "defaultAuditorRole": "Lead Privacy Auditor",
+    "isSetupComplete": true,
+    "lastUpdated": "2026-09-11T18:03:55.971Z"
+  },
   "discoveredServices": [
     {
       "name": "Ollama Local AI",
@@ -33,8 +49,8 @@
       "url": "http://localhost:8080/v1/models",
       "status": "online",
       "type": "Local REST",
-      "latencyMs": 12
+      "latencyMs": 183
     }
   ],
-  "lastScanTimestamp": "2026-07-25T19:06:49.654Z"
+  "lastScanTimestamp": "2026-09-12T14:27:32.284Z"
 }

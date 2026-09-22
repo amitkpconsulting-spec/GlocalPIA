@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ShieldCheck, FileText, AlertTriangle, Download, Plus, Search, Server, Globe, Shield, User, Users, Lock, Cpu, Activity, Sliders, Bot, Sparkles, Layers, ChevronDown, LayoutDashboard } from 'lucide-react';
+import { ShieldCheck, FileText, AlertTriangle, Download, Plus, Search, Server, Globe, Shield, User, Users, Lock, Cpu, Activity, Sliders, Bot, Sparkles, Layers, ChevronDown, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { WorkflowMode, AppUser } from '../types';
 
-export type TabType = 'dashboard' | 'directory' | 'form' | 'gaps' | 'report' | 'widgets' | 'setup';
+export type TabType = 'dashboard' | 'benchmarking' | 'forecasting' | 'directory' | 'form' | 'gaps' | 'report' | 'widgets' | 'setup';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-black text-lg sm:text-xl text-white tracking-tight group-hover:text-cyan-300 transition">
-                  Local PIA
+                  GLOCAL PIA
                 </span>
                 <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-cyan-950/90 text-cyan-300 border border-cyan-500/40 rounded-md shadow-sm">
                   v2.6 ENGINE
@@ -250,6 +250,18 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Summary Dashboard (PIA Governance)</span>
                   </>
                 )}
+                {activeTab === 'benchmarking' && (
+                  <>
+                    <TrendingUp className="w-3.5 h-3.5 text-purple-400 inline" />
+                    <span>Sector Benchmarking (Recharts Risk & Gap Velocity)</span>
+                  </>
+                )}
+                {activeTab === 'forecasting' && (
+                  <>
+                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400 inline" />
+                    <span>Predictive Risk Forecasting (Trend Analysis & Compliance Planning)</span>
+                  </>
+                )}
                 {activeTab === 'directory' && (
                   <>
                     <FileText className="w-3.5 h-3.5 text-cyan-400 inline" />
@@ -331,6 +343,60 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                   <div className="text-[11px] text-zinc-400">
                     Fortexa PIA Governance risk telemetry & active reviews
+                  </div>
+                </div>
+              </button>
+
+              {/* Sector Benchmarking */}
+              <button
+                id="tab-benchmarking"
+                onClick={() => {
+                  setActiveTab('benchmarking');
+                  setIsNavDropdownOpen(false);
+                }}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-xl transition text-left group ${
+                  activeTab === 'benchmarking'
+                    ? 'bg-purple-950/80 text-purple-300 border border-purple-800 font-bold'
+                    : 'text-zinc-300 hover:bg-zinc-800/80'
+                }`}
+              >
+                <div className="p-2 bg-gradient-to-br from-purple-950 to-indigo-950 text-purple-400 rounded-lg border border-purple-800 shrink-0">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-purple-300 transition flex items-center gap-1.5">
+                    <span>Sector Benchmarking</span>
+                    <span className="px-1.5 py-0.2 bg-purple-900 text-purple-200 text-[9px] rounded font-mono">RECHARTS</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400">
+                    Compare aggregate risk levels & gap closure rates across banking sub-categories
+                  </div>
+                </div>
+              </button>
+
+              {/* Predictive Risk Forecasting */}
+              <button
+                id="tab-forecasting"
+                onClick={() => {
+                  setActiveTab('forecasting');
+                  setIsNavDropdownOpen(false);
+                }}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-xl transition text-left group ${
+                  activeTab === 'forecasting'
+                    ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-800 font-bold'
+                    : 'text-zinc-300 hover:bg-zinc-800/80'
+                }`}
+              >
+                <div className="p-2 bg-gradient-to-br from-indigo-950 to-purple-950 text-indigo-400 rounded-lg border border-indigo-800 shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition flex items-center gap-1.5">
+                    <span>Predictive Risk Forecasting</span>
+                    <span className="px-1.5 py-0.2 bg-indigo-900 text-indigo-200 text-[9px] rounded font-mono">TREND AI</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400">
+                    Project future risk scores based on remediation velocity & simulate 7 critical AI systems
                   </div>
                 </div>
               </button>

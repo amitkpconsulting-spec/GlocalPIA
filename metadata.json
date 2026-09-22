@@ -1,6 +1,6 @@
 {
-  "name": "Local PIA (Privacy Impact Assessment & Governance Engine)",
-  "description": "Local PIA (Privacy Impact Assessment & Governance Engine) with local AI analysis, gap remediation tracking, and DPO audit workflows.",
+  "name": "GLOCAL PIA",
+  "description": "GLOCAL PIA (Privacy Impact Assessment & Governance Engine) with sector benchmarking, predictive risk forecasting, 7 critical AI systems telemetry, and remediation planning.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

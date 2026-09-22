@@ -1,7 +1,10 @@
+import { PIAAssessment, RemediationGap } from '../types';
+import { calculatePIARisk } from './riskCalculator';
+
 /**
  * Local AI Engine Utility
  * Provides offline, air-gapped NLP capabilities for rephrasing, expanding,
- * polishing text, and auto-filling dummy project context & scope.
+ * polishing text, auto-filling dummy context, and aggregating executive PIA snapshots.
  */
 
 export type LocalAiTone = 'formal_audit' | 'technical' | 'executive';
@@ -185,4 +188,187 @@ export function polishTextLocally(
   }
 
   return polished;
+}
+
+/**
+ * High-Level Executive Snapshot Result Interface
+ */
+export interface ExecutiveSnapshotResult {
+  snapshotId: string;
+  timestampIso: string;
+  formattedTime: string;
+  reportingCycle: string;
+  engineUsed: string;
+  totalPias: number;
+  openGaps: number;
+  criticalPiasCount: number;
+  highPiasCount: number;
+  averageResidualScore: number;
+  averageBaseScore: number;
+  riskReductionPercentage: number;
+  complianceRate: number;
+  portfolioRiskTier: 'Low' | 'Medium' | 'High' | 'Critical';
+  aiExecutiveBriefing: string;
+  statutoryDirectives: string[];
+  topExposureSystems: {
+    id: string;
+    title: string;
+    score: number;
+    riskLevel: string;
+    gapsCount: number;
+    sector: string;
+  }[];
+  regulatoryReadiness: {
+    gdprArticle35: string;
+    nhsIgCompliance: string;
+    dpdpaReadiness: string;
+    residualRiskTolerance: string;
+  };
+}
+
+/**
+ * Local AI Data Aggregation Service
+ * Synthesizes active PIAs, open remediation gaps, and historical mitigations
+ * into an attested executive snapshot for DPO and CISO reporting.
+ */
+export function aggregateExecutivePiaSnapshot(
+  pias: PIAAssessment[],
+  gaps: RemediationGap[],
+  reportingCycle: string = 'Current Cycle',
+  companyName: string = 'Enterprise Privacy Office'
+): ExecutiveSnapshotResult {
+  const totalPias = pias.length;
+
+  // Evaluate risk calculations for every assessment
+  const evaluatedList = pias.map(pia => {
+    const risk = (pia.riskResult && pia.riskResult.finalRiskScore > 0)
+      ? pia.riskResult
+      : calculatePIARisk(pia.answers || {}, pia.industrySector);
+
+    const relatedGaps = gaps.filter(g => g.piaId === pia.id || g.piaId === pia.fid || g.piaId === pia.bid);
+    const openGapsCount = relatedGaps.filter(g => g.status === 'Open' || g.status === 'In Progress' || g.status === 'Overdue').length;
+
+    return {
+      pia,
+      risk,
+      finalScore: risk.finalRiskScore,
+      baseScore: risk.baseRiskScore,
+      riskLevel: risk.riskLevel,
+      openGapsCount,
+      sector: pia.industrySector || 'general',
+      isApproved: pia.status === 'Approved' || pia.endorsements?.some(e => e.role === 'Data Protection Officer' && e.signed),
+    };
+  });
+
+  const sumFinal = evaluatedList.reduce((acc, curr) => acc + curr.finalScore, 0);
+  const sumBase = evaluatedList.reduce((acc, curr) => acc + curr.baseScore, 0);
+  const avgScore = totalPias > 0 ? Math.round((sumFinal / totalPias) * 10) / 10 : 0;
+  const avgBaseScore = totalPias > 0 ? Math.round((sumBase / totalPias) * 10) / 10 : 0;
+  const riskReductionPercentage = avgBaseScore > 0
+    ? Math.max(0, Math.round(((avgBaseScore - avgScore) / avgBaseScore) * 100))
+    : 0;
+
+  let portfolioRiskTier: 'Low' | 'Medium' | 'High' | 'Critical' = 'Low';
+  if (avgScore >= 16.1) {
+    portfolioRiskTier = 'Critical';
+  } else if (avgScore >= 9.1) {
+    portfolioRiskTier = 'High';
+  } else if (avgScore >= 4.1) {
+    portfolioRiskTier = 'Medium';
+  }
+
+  const openGaps = gaps.filter(g => g.status === 'Open' || g.status === 'In Progress' || g.status === 'Overdue');
+  const criticalGaps = openGaps.filter(g => g.riskLevel === 'Critical');
+  const highGaps = openGaps.filter(g => g.riskLevel === 'High');
+  const overdueGaps = openGaps.filter(g => g.status === 'Overdue');
+  const resolvedGaps = gaps.filter(g => g.status === 'Resolved');
+
+  const criticalPias = evaluatedList.filter(e => e.riskLevel === 'Critical');
+  const highPias = evaluatedList.filter(e => e.riskLevel === 'High');
+  const approvedCount = evaluatedList.filter(e => e.isApproved).length;
+
+  const piaApprovalRate = totalPias > 0 ? approvedCount / totalPias : 1;
+  const gapResolutionRate = gaps.length > 0 ? resolvedGaps.length / gaps.length : 1;
+  const complianceRate = Math.min(100, Math.max(0, Math.round((piaApprovalRate * 0.6 + gapResolutionRate * 0.4) * 100)));
+
+  // Top high-exposure systems
+  const sortedByExposure = [...evaluatedList].sort((a, b) => b.finalScore - a.finalScore);
+  const topExposureSystems = sortedByExposure.slice(0, 4).map(item => ({
+    id: item.pia.fid || item.pia.id,
+    title: item.pia.projectTitle,
+    score: item.finalScore,
+    riskLevel: item.riskLevel,
+    gapsCount: item.openGapsCount,
+    sector: item.sector,
+  }));
+
+  // Local AI Air-Gapped Natural Language Executive Briefing Synthesis
+  let postureTone = '';
+  if (portfolioRiskTier === 'Critical') {
+    postureTone = `CRITICAL SUPERVISORY NOTICE: The aggregate privacy risk index currently stands at ${avgScore.toFixed(1)}/25.0 (${criticalPias.length} Critical assessments identified). Immediate executive escalation and EDPB/ICO Article 36 prior consultation is warranted for unmitigated processing streams.`;
+  } else if (portfolioRiskTier === 'High') {
+    postureTone = `ELEVATED RESIDUAL EXPOSURE: The assessed portfolio reflects a mean residual risk rating of ${avgScore.toFixed(1)}/25.0 across ${totalPias} data systems. While mitigations have achieved a -${riskReductionPercentage}% exposure reduction from inherent baselines, ${criticalPias.length} Critical and ${highPias.length} High tier systems require accelerated engineering remediation.`;
+  } else if (portfolioRiskTier === 'Medium') {
+    postureTone = `CONTROLLED PRIVACY POSTURE: Portfolio risk index is stabilized at ${avgScore.toFixed(1)}/25.0 (Medium Tier). Inherent risk was curbed by -${riskReductionPercentage}% through applied technical safeguards and statutory controls. Total compliance index is currently attested at ${complianceRate}%.`;
+  } else {
+    postureTone = `EXEMPLARY STATUTORY COMPLIANCE: The data processing portfolio demonstrates high privacy maturity with a low residual risk score of ${avgScore.toFixed(1)}/25.0 and an attested compliance rate of ${complianceRate}%. Technical safeguards and data minimization controls are operating effectively.`;
+  }
+
+  const gapSummarySentence = openGaps.length > 0
+    ? `The audit registry contains ${openGaps.length} unresolved remediation gaps (${criticalGaps.length} Critical, ${highGaps.length} High), with ${overdueGaps.length > 0 ? `${overdueGaps.length} exceeding statutory SLA targets` : 'all items currently tracking within mandated SLA milestones'}.`
+    : `All identified remediation gaps across the portfolio have been fully resolved and validated.`;
+
+  const sectorHighlight = topExposureSystems.length > 0
+    ? `Primary risk concentration centers around "${topExposureSystems[0].title}" (${topExposureSystems[0].sector.toUpperCase()} sector, residual risk: ${topExposureSystems[0].score.toFixed(1)}).`
+    : 'No concentrated risk clusters detected across audited operational domains.';
+
+  const aiExecutiveBriefing = `${postureTone} ${gapSummarySentence} ${sectorHighlight} This telemetry snapshot was aggregated locally via the Air-Gapped NLP Governance Engine for ${companyName} (${reportingCycle}).`;
+
+  // Dynamic DPO statutory directives
+  const statutoryDirectives: string[] = [];
+  if (criticalPias.length > 0) {
+    statutoryDirectives.push(`Conduct formal GDPR Article 36 supervisory consultation for ${criticalPias.length} system(s) flagged at Critical residual risk.`);
+  }
+  if (overdueGaps.length > 0) {
+    statutoryDirectives.push(`Escalate ${overdueGaps.length} overdue remediation SLA(s) to technical product owners for immediate remediation.`);
+  } else if (criticalGaps.length > 0) {
+    statutoryDirectives.push(`Expedite closeout of ${criticalGaps.length} Critical severity gap(s) prior to next reporting milestone.`);
+  }
+  if (riskReductionPercentage < 30 && avgBaseScore > 10) {
+    statutoryDirectives.push('Mandate end-to-end KMS encryption at rest and automated pseudonymization to increase risk attenuation.');
+  } else {
+    statutoryDirectives.push('Maintain quarterly continuous re-audit schedule and verify third-party Data Processing Agreements (Art. 28).');
+  }
+  if (approvedCount < totalPias) {
+    statutoryDirectives.push(`Complete formal DPO sign-off workflow for ${totalPias - approvedCount} pending assessment(s).`);
+  }
+
+  const now = new Date();
+  const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return {
+    snapshotId: `SNAP-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+    timestampIso: now.toISOString(),
+    formattedTime,
+    reportingCycle,
+    engineUsed: 'Local Air-Gapped NLP Intelligence Engine',
+    totalPias,
+    openGaps: openGaps.length,
+    criticalPiasCount: criticalPias.length,
+    highPiasCount: highPias.length,
+    averageResidualScore: avgScore,
+    averageBaseScore: avgBaseScore,
+    riskReductionPercentage,
+    complianceRate,
+    portfolioRiskTier,
+    aiExecutiveBriefing,
+    statutoryDirectives,
+    topExposureSystems,
+    regulatoryReadiness: {
+      gdprArticle35: criticalPias.length === 0 ? 'Compliant' : 'Prior Consultation Pending',
+      nhsIgCompliance: openGaps.length <= 3 ? 'Substantial (Tier 1)' : 'Action Plan Required',
+      dpdpaReadiness: avgScore <= 9.0 ? 'Certified' : 'Under Assessment',
+      residualRiskTolerance: avgScore <= 9.0 ? 'Within Tolerance' : 'Exceeds Tolerance Threshold',
+    },
+  };
 }

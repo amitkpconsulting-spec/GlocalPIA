@@ -7,16 +7,39 @@ interface ExportButtonDropdownProps {
   pia: PIAAssessment;
   variant?: 'primary' | 'secondary' | 'compact' | 'full-banner';
   className?: string;
+  dropdownPosition?: 'top-right' | 'bottom-right' | 'auto';
 }
 
 export const ExportButtonDropdown: React.FC<ExportButtonDropdownProps> = ({
   pia,
   variant = 'primary',
   className = '',
+  dropdownPosition = 'top-right',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [exportedFormat, setExportedFormat] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Determine effective position (defaults to top-right floater to stay within visible page)
+  const [effectivePosition, setEffectivePosition] = useState<'top-right' | 'bottom-right'>(
+    dropdownPosition === 'bottom-right' ? 'bottom-right' : 'top-right'
+  );
+
+  useEffect(() => {
+    if (dropdownPosition === 'top-right') {
+      setEffectivePosition('top-right');
+      return;
+    }
+    if (dropdownPosition === 'bottom-right') {
+      setEffectivePosition('bottom-right');
+      return;
+    }
+    if (isOpen && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setEffectivePosition(spaceBelow < 280 ? 'top-right' : 'bottom-right');
+    }
+  }, [isOpen, dropdownPosition]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -25,8 +48,18 @@ export const ExportButtonDropdown: React.FC<ExportButtonDropdownProps> = ({
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleTriggerExport = (format: 'pdf' | 'xls' | 'csv' | 'word') => {
@@ -129,24 +162,37 @@ export const ExportButtonDropdown: React.FC<ExportButtonDropdownProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`inline-flex items-center justify-between gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition shadow-md border ${
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        title="Export Compliance Package [PDF, Excel XLS, CSV, Word DOC]"
+        className={`inline-flex items-center justify-between gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition shadow-md border ${
           variant === 'primary'
             ? 'bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-zinc-950 border-cyan-400'
             : variant === 'compact'
             ? 'bg-zinc-900 hover:bg-zinc-800 text-cyan-300 border-zinc-800 text-[11px] px-2.5 py-1.5'
             : 'bg-zinc-900 hover:bg-zinc-850 text-zinc-200 border-zinc-700'
-        }`}
+        } ${isOpen ? 'ring-2 ring-cyan-400/50' : ''} ${className.includes('w-full') ? 'w-full' : ''}`}
       >
-        <Download className="w-3.5 h-3.5 shrink-0" />
-        <span className="font-mono">
-          {exportedFormat ? `Exported ${exportedFormat}!` : `Export [${primaryUniqueId}]`}
-        </span>
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <div className="flex items-center gap-1.5">
+          <Download className="w-3.5 h-3.5 shrink-0" />
+          <span className="font-mono truncate">
+            {exportedFormat ? `Exported ${exportedFormat}!` : `Export [${primaryUniqueId}]`}
+          </span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isOpen ? (effectivePosition === 'top-right' ? '-rotate-180' : 'rotate-180') : ''}`} />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu (Context Floater) */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 text-xs animate-fadeIn">
+        <div
+          role="menu"
+          aria-label="Export Compliance Options"
+          className={`absolute right-0 ${
+            effectivePosition === 'top-right'
+              ? 'bottom-full mb-2 origin-bottom-right'
+              : 'top-full mt-2 origin-top-right'
+          } w-72 max-w-[calc(100vw-2rem)] bg-zinc-900/98 backdrop-blur-md border border-zinc-750 rounded-2xl shadow-2xl shadow-black/90 p-2.5 z-50 text-xs animate-fadeIn`}
+        >
           <div className="px-3 py-2 border-b border-zinc-800/80 mb-1">
             <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-wider block">
               Formal Compliance Package

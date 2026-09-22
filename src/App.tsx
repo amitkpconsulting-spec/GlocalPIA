@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Header, TabType } from './components/Header';
+import { ExternalLink } from 'lucide-react';
+import { Sidebar } from './components/Sidebar';
+import { TopUtilityHeader } from './components/TopUtilityHeader';
+import { CommandPaletteModal } from './components/CommandPaletteModal';
 import { SummaryDashboard } from './components/SummaryDashboard';
 import { DirectoryView } from './components/DirectoryView';
 import { AssessmentForm } from './components/AssessmentForm';
@@ -11,13 +14,51 @@ import { SystemConfigModal } from './components/SystemConfigModal';
 import { ServerHealthDashboard } from './components/ServerHealthDashboard';
 import { SetupPage } from './components/SetupPage';
 import { WidgetsPage, WidgetSubTab } from './components/WidgetsPage';
-import { PIAAssessment, RemediationGap, GapStatus, WorkflowMode, AppUser, SystemSetupConfig } from './types';
+import { SectorBenchmarking } from './components/SectorBenchmarking';
+import { PredictiveRiskForecasting } from './components/PredictiveRiskForecasting';
+import { ExecutiveSummaryView } from './components/ExecutiveSummaryView';
+import { PIAAssessment, RemediationGap, GapStatus, WorkflowMode, AppUser, SystemSetupConfig, TabType } from './types';
 import { INITIAL_PIAS, INITIAL_GAPS } from './data/mockData';
+import { generateSummaryPdfReport } from './utils/pdfReportGenerator';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [widgetsSubTab, setWidgetsSubTab] = useState<WidgetSubTab>('server-health');
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>('frontend');
+  
+  // Full-viewport sidebar and command palette states
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('glocal_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('glocal_sidebar_collapsed', String(isSidebarCollapsed));
+    } catch {
+      // Ignore
+    }
+  }, [isSidebarCollapsed]);
+
+  // Global Keyboard Shortcuts (Cmd/Ctrl + K for search, Cmd/Ctrl + B for sidebar)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarCollapsed(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
   
   const [pias, setPias] = useState<PIAAssessment[]>(INITIAL_PIAS);
   const [gaps, setGaps] = useState<RemediationGap[]>(INITIAL_GAPS);
@@ -296,15 +337,15 @@ export function App() {
   const openGapsCount = gaps.filter(g => g.status === 'Open' || g.status === 'Overdue').length;
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100 flex flex-col antialiased selection:bg-cyan-500 selection:text-zinc-950">
-      {/* Global Navigation Header */}
-      <Header
+    <div className="h-screen h-[100dvh] w-screen overflow-hidden bg-zinc-950 font-sans text-zinc-100 flex antialiased selection:bg-indigo-600 selection:text-white">
+      {/* Collapsible Sidebar Navigation with Independent Scroll Pane */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenWidgetSubTab={(subTab) => {
-          setWidgetsSubTab(subTab);
-          setActiveTab('widgets');
-        }}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+        isMobileOpen={isMobileSidebarOpen}
+        setIsMobileOpen={setIsMobileSidebarOpen}
         totalPias={pias.length}
         highRiskCount={highRiskCount}
         openGapsCount={openGapsCount}
@@ -328,101 +369,248 @@ export function App() {
           setSelectedPia(null);
           setActiveTab('form');
         }}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
-      {/* Main Content View Switcher */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' && (
-          <SummaryDashboard
-            pias={pias}
-            gaps={gaps}
-            onSelectPia={(pia) => {
-              setSelectedPia(pia);
-              setActiveTab('form');
-            }}
-            onNewAssessment={() => {
-              setSelectedPia(null);
-              setActiveTab('form');
-            }}
-            onNavigateToGaps={() => setActiveTab('gaps')}
-            onNavigateToDirectory={() => setActiveTab('directory')}
-          />
-        )}
+      {/* Primary Viewport Area (Header + Main Grid Workspace) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        {/* Sticky Top Utility Header */}
+        <TopUtilityHeader
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isSidebarCollapsed={isSidebarCollapsed}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+          onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          totalPias={pias.length}
+          highRiskCount={highRiskCount}
+          openGapsCount={openGapsCount}
+          workflowMode={workflowMode}
+          setWorkflowMode={setWorkflowMode}
+          currentUser={currentUser}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenUserDirectory={() => {
+            setWidgetsSubTab('user-directory');
+            setActiveTab('widgets');
+          }}
+          onOpenSystemConfig={() => {
+            setWidgetsSubTab('system-config');
+            setActiveTab('widgets');
+          }}
+          onOpenServerHealth={() => {
+            setWidgetsSubTab('server-health');
+            setActiveTab('widgets');
+          }}
+          onNewAssessment={() => {
+            setSelectedPia(null);
+            setActiveTab('form');
+          }}
+        />
 
-        {activeTab === 'setup' && (
-          <SetupPage
-            currentSetup={systemSetup}
-            onSaveSetup={updatedSetup => setSystemSetup(updatedSetup)}
-            onSavePia={(piaDraft) => {
-              handleSavePia(piaDraft);
-              setActiveTab('directory');
-            }}
-            onNavigateToForm={() => {
-              setSelectedPia(null);
-              setActiveTab('form');
-            }}
-            onNavigateToDirectory={() => setActiveTab('directory')}
-          />
-        )}
+        {/* Main Content Workspace (Independent Scroll Pane, consistent 16-24px breathing room) */}
+        <main className="flex-1 overflow-y-auto scroll-pane p-4 sm:p-5 md:p-6 lg:p-7">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {activeTab === 'dashboard' && (
+              <SummaryDashboard
+                pias={pias}
+                gaps={gaps}
+                currentUser={currentUser}
+                systemSetup={systemSetup}
+                onSelectPia={(pia) => {
+                  setSelectedPia(pia);
+                  setActiveTab('form');
+                }}
+                onNewAssessment={() => {
+                  setSelectedPia(null);
+                  setActiveTab('form');
+                }}
+                onNavigateToGaps={() => setActiveTab('gaps')}
+                onNavigateToDirectory={() => setActiveTab('directory')}
+                onNavigateToBenchmarking={() => setActiveTab('benchmarking')}
+                onNavigateToForecasting={() => setActiveTab('forecasting')}
+                onNavigateToExecutive={() => setActiveTab('executive')}
+              />
+            )}
 
-        {activeTab === 'directory' && (
-          <DirectoryView
-            pias={pias}
-            workflowMode={workflowMode}
-            onSelectPia={pia => {
-              setSelectedPia(pia);
-              setActiveTab('form');
-            }}
-            onNewAssessment={() => {
-              setSelectedPia(null);
-              setActiveTab('form');
-            }}
-            onDeletePia={handleDeletePia}
-            onViewReport={pia => {
-              setSelectedPia(pia);
-              setActiveTab('report');
-            }}
-          />
-        )}
+            {activeTab === 'executive' && (
+              <ExecutiveSummaryView
+                pias={pias}
+                gaps={gaps}
+                currentUser={currentUser}
+                systemSetup={systemSetup}
+                onSelectPia={(pia) => {
+                  setSelectedPia(pia);
+                  setActiveTab('form');
+                }}
+                onNavigateToGaps={() => setActiveTab('gaps')}
+                onNavigateToDirectory={() => setActiveTab('directory')}
+                onRefreshData={fetchInitialData}
+              />
+            )}
 
-        {activeTab === 'form' && (
-          <AssessmentForm
-            initialPia={selectedPia}
-            systemSetup={systemSetup}
-            workflowMode={workflowMode}
-            onSavePia={handleSavePia}
-            onCancel={() => setActiveTab('directory')}
-            onOpenSetup={() => setActiveTab('setup')}
-          />
-        )}
+            {activeTab === 'benchmarking' && (
+              <SectorBenchmarking
+                pias={pias}
+                gaps={gaps}
+                onSelectPia={(pia) => {
+                  setSelectedPia(pia);
+                  setActiveTab('form');
+                }}
+                onNavigateToGaps={() => setActiveTab('gaps')}
+                onNavigateToForecasting={() => setActiveTab('forecasting')}
+              />
+            )}
 
-        {activeTab === 'gaps' && (
-          <GapLogDashboard
-            gaps={gaps}
-            pias={pias}
-            onUpdateGap={handleUpdateGap}
-            onAddFollowUp={handleAddFollowUp}
-            onCreateManualGap={handleCreateManualGap}
-            onDeleteGap={id => setGaps(prev => prev.filter(g => g.id !== id))}
-          />
-        )}
+            {activeTab === 'forecasting' && (
+              <PredictiveRiskForecasting
+                pias={pias}
+                gaps={gaps}
+                onSelectPia={(pia) => {
+                  setSelectedPia(pia);
+                  setActiveTab('form');
+                }}
+                onNavigateToGaps={() => setActiveTab('gaps')}
+                onNavigateToBenchmarking={() => setActiveTab('benchmarking')}
+              />
+            )}
 
-        {activeTab === 'report' && (
-          <ExportReportModal
-            pias={pias}
-            selectedPia={selectedPia}
-            onSelectPia={setSelectedPia}
-            onSignOff={handleSignOff}
-          />
-        )}
+            {activeTab === 'setup' && (
+              <SetupPage
+                currentSetup={systemSetup}
+                onSaveSetup={updatedSetup => setSystemSetup(updatedSetup)}
+                onSavePia={(piaDraft) => {
+                  handleSavePia(piaDraft);
+                  setActiveTab('directory');
+                }}
+                onNavigateToForm={() => {
+                  setSelectedPia(null);
+                  setActiveTab('form');
+                }}
+                onNavigateToDirectory={() => setActiveTab('directory')}
+              />
+            )}
 
-        {activeTab === 'widgets' && (
-          <WidgetsPage
-            authToken={authToken}
-            initialSubTab={widgetsSubTab}
-          />
-        )}
-      </main>
+            {activeTab === 'directory' && (
+              <DirectoryView
+                pias={pias}
+                workflowMode={workflowMode}
+                onSelectPia={pia => {
+                  setSelectedPia(pia);
+                  setActiveTab('form');
+                }}
+                onNewAssessment={() => {
+                  setSelectedPia(null);
+                  setActiveTab('form');
+                }}
+                onDeletePia={handleDeletePia}
+                onViewReport={pia => {
+                  setSelectedPia(pia);
+                  setActiveTab('report');
+                }}
+              />
+            )}
+
+            {activeTab === 'form' && (
+              <AssessmentForm
+                initialPia={selectedPia}
+                systemSetup={systemSetup}
+                workflowMode={workflowMode}
+                onSavePia={handleSavePia}
+                onCancel={() => setActiveTab('directory')}
+                onOpenSetup={() => setActiveTab('setup')}
+              />
+            )}
+
+            {activeTab === 'gaps' && (
+              <GapLogDashboard
+                gaps={gaps}
+                pias={pias}
+                onUpdateGap={handleUpdateGap}
+                onAddFollowUp={handleAddFollowUp}
+                onCreateManualGap={handleCreateManualGap}
+                onDeleteGap={id => setGaps(prev => prev.filter(g => g.id !== id))}
+              />
+            )}
+
+            {activeTab === 'report' && (
+              <ExportReportModal
+                pias={pias}
+                selectedPia={selectedPia}
+                onSelectPia={setSelectedPia}
+                onSignOff={handleSignOff}
+              />
+            )}
+
+            {activeTab === 'widgets' && (
+              <WidgetsPage
+                authToken={authToken}
+                initialSubTab={widgetsSubTab}
+              />
+            )}
+
+            {/* Global Workspace Footer */}
+            <footer className="mt-12 pt-6 pb-4 border-t border-zinc-800/80 text-xs text-zinc-400 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>
+                  Developed by{' '}
+                  <a
+                    href="https://www.technoscope.co.in"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors underline-offset-2 hover:underline"
+                  >
+                    www.technoscope.co.in
+                  </a>
+                </span>
+                <span className="text-zinc-600 hidden sm:inline">•</span>
+                <span>
+                  License: <span className="font-mono text-zinc-300 font-medium">Proprietary</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <span>To consult connect with</span>
+                <a
+                  href="https://www.technoscope.co.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors underline-offset-2 hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Technoscope</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </footer>
+          </div>
+        </main>
+      </div>
+
+      {/* Global Command Palette (Cmd + K / Ctrl + K) */}
+      <CommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        pias={pias}
+        onNavigateTab={setActiveTab}
+        onSelectPia={(pia) => {
+          setSelectedPia(pia);
+          setActiveTab('form');
+        }}
+        onNewAssessment={() => {
+          setSelectedPia(null);
+          setActiveTab('form');
+        }}
+        workflowMode={workflowMode}
+        setWorkflowMode={setWorkflowMode}
+        onDownloadPdfReport={() => {
+          generateSummaryPdfReport({
+            pias,
+            gaps,
+            organizationName: systemSetup?.organizationName || 'Glocal Privacy & AI Governance Directorate',
+            generatedBy: currentUser?.fullName 
+              ? `${currentUser.fullName} (${currentUser.role === 'admin' ? 'Lead DPO Auditor' : 'Privacy Lead'})`
+              : 'Chief Privacy Officer / Lead DPO Auditor',
+          });
+        }}
+      />
 
       {/* Security Governance Modals */}
       <AuthModal
@@ -451,14 +639,6 @@ export function App() {
           onClose={() => setIsServerHealthModalOpen(false)}
         />
       )}
-
-      {/* Footer */}
-      <footer className="bg-zinc-900/80 border-t border-zinc-800/80 py-4 text-center text-xs text-zinc-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span className="font-mono text-zinc-400">Portable Privacy Impact Assessment (PIA) Management Platform v2.6</span>
-          <span className="text-zinc-500">Compliant with NHS IG Toolkit • IIAC Standards • NOREA Privacy Framework</span>
-        </div>
-      </footer>
     </div>
   );
 }

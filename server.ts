@@ -976,6 +976,145 @@ Identify up to 4 critical compliance gaps. Return ONLY a valid JSON array of obj
   });
 });
 
+// POST /api/ai/aggregate-snapshot - Local AI Executive Snapshot Aggregation Service
+app.post('/api/ai/aggregate-snapshot', async (req, res) => {
+  try {
+    const { cycleId = 'Current Cycle', cycleLabel = 'Current Governance Cycle', companyName = 'Enterprise Governance' } = req.body || {};
+
+    const totalPias = pias.length;
+    const openGaps = gaps.filter(g => g.status === 'Open' || g.status === 'In Progress' || g.status === 'Overdue');
+    const criticalGaps = openGaps.filter(g => g.riskLevel === 'Critical');
+    const highGaps = openGaps.filter(g => g.riskLevel === 'High');
+    const overdueGaps = openGaps.filter(g => g.status === 'Overdue');
+    const resolvedGaps = gaps.filter(g => g.status === 'Resolved');
+
+    const totalScore = pias.reduce((sum, p) => sum + (p.riskResult?.finalRiskScore || 0), 0);
+    const totalBase = pias.reduce((sum, p) => sum + (p.riskResult?.baseRiskScore || p.riskResult?.finalRiskScore || 0), 0);
+    const avgScore = totalPias > 0 ? Math.round((totalScore / totalPias) * 10) / 10 : 0;
+    const avgBase = totalPias > 0 ? Math.round((totalBase / totalPias) * 10) / 10 : 0;
+    const riskReductionPercentage = avgBase > 0 ? Math.max(0, Math.round(((avgBase - avgScore) / avgBase) * 100)) : 0;
+
+    const criticalPias = pias.filter(p => p.riskResult?.riskLevel === 'Critical');
+    const highPias = pias.filter(p => p.riskResult?.riskLevel === 'High');
+    const approvedCount = pias.filter(p => p.status === 'Approved' || p.endorsements?.some(e => e.role === 'Data Protection Officer' && e.signed)).length;
+
+    const piaApprovalRate = totalPias > 0 ? approvedCount / totalPias : 1;
+    const gapResolutionRate = gaps.length > 0 ? resolvedGaps.length / gaps.length : 1;
+    const complianceRate = Math.min(100, Math.max(0, Math.round((piaApprovalRate * 0.6 + gapResolutionRate * 0.4) * 100)));
+
+    let portfolioRiskTier: 'Low' | 'Medium' | 'High' | 'Critical' = 'Low';
+    if (avgScore >= 16.1) portfolioRiskTier = 'Critical';
+    else if (avgScore >= 9.1) portfolioRiskTier = 'High';
+    else if (avgScore >= 4.1) portfolioRiskTier = 'Medium';
+
+    const sortedPias = [...pias].sort((a, b) => (b.riskResult?.finalRiskScore || 0) - (a.riskResult?.finalRiskScore || 0));
+    const topExposureSystems = sortedPias.slice(0, 4).map(p => ({
+      id: p.fid || p.id,
+      title: p.projectTitle,
+      score: p.riskResult?.finalRiskScore || 0,
+      riskLevel: p.riskResult?.riskLevel || 'Low',
+      gapsCount: gaps.filter(g => (g.piaId === p.id || g.piaId === p.fid) && (g.status === 'Open' || g.status === 'In Progress')).length,
+      sector: p.industrySector || 'general',
+    }));
+
+    let aiEngineUsed = 'Local Air-Gapped NLP Intelligence Engine';
+    let aiExecutiveBriefing = '';
+
+    // If local Ollama or LM Studio is active, we can attempt rich dynamic narrative generation
+    const promptText = `Generate a concise 3-sentence executive briefing for a DPO/CISO. Total PIAs: ${totalPias}, Avg Residual Risk: ${avgScore}/25 (${portfolioRiskTier} Tier), Open Gaps: ${openGaps.length} (${criticalGaps.length} Critical), Risk Reduction: -${riskReductionPercentage}%. Focus on GDPR Art. 36 prior consultation and remediation SLA deadlines.`;
+
+    if (runtimeConfig.ollamaEndpoint && !aiExecutiveBriefing) {
+      try {
+        const ollamaRes = await fetch(runtimeConfig.ollamaEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: runtimeConfig.ollamaModel || 'llama3',
+            prompt: promptText,
+            stream: false,
+          }),
+        });
+        if (ollamaRes.ok) {
+          const oData = await ollamaRes.json();
+          if (oData.response) {
+            aiExecutiveBriefing = oData.response.trim();
+            aiEngineUsed = `Ollama Local Model (${runtimeConfig.ollamaModel})`;
+          }
+        }
+      } catch {
+        // Fallback to local deterministic air-gapped synthesis
+      }
+    }
+
+    if (!aiExecutiveBriefing) {
+      const postureIntro = portfolioRiskTier === 'Critical'
+        ? `CRITICAL SUPERVISORY NOTICE: Average portfolio residual risk has surged to ${avgScore.toFixed(1)}/25.0 across ${totalPias} assessed systems (${criticalPias.length} Critical Tier). Direct DPO intervention and EDPB Article 36 supervisory consultation is mandatory for unmitigated workflows.`
+        : portfolioRiskTier === 'High'
+        ? `ELEVATED RESIDUAL EXPOSURE: The assessed privacy portfolio reflects a mean residual risk rating of ${avgScore.toFixed(1)}/25.0 across ${totalPias} active data processing systems. While controls have driven a -${riskReductionPercentage}% exposure reduction from inherent baselines, ${criticalPias.length} Critical and ${highPias.length} High tier systems require accelerated engineering closeout.`
+        : `CONTROLLED PRIVACY POSTURE: Portfolio risk index is stabilized at ${avgScore.toFixed(1)}/25.0 (${portfolioRiskTier} Tier). Inherent risk was curbed by -${riskReductionPercentage}% through applied technical safeguards and statutory controls. Total compliance index is currently attested at ${complianceRate}%.`;
+
+      const gapSummary = openGaps.length > 0
+        ? `Audit registry tracks ${openGaps.length} open remediation items (${criticalGaps.length} Critical, ${highGaps.length} High), with ${overdueGaps.length > 0 ? `${overdueGaps.length} exceeding statutory SLA targets` : 'all items tracking within mandated SLA milestones'}.`
+        : `All identified remediation gaps across the portfolio are fully resolved and verified.`;
+
+      aiExecutiveBriefing = `${postureIntro} ${gapSummary} This telemetry snapshot was aggregated locally via the Air-Gapped NLP Governance Engine for ${companyName} (${cycleLabel}).`;
+    }
+
+    const statutoryDirectives: string[] = [];
+    if (criticalPias.length > 0) {
+      statutoryDirectives.push(`Conduct formal GDPR Article 36 supervisory consultation for ${criticalPias.length} system(s) flagged at Critical residual risk.`);
+    }
+    if (overdueGaps.length > 0) {
+      statutoryDirectives.push(`Escalate ${overdueGaps.length} overdue remediation SLA(s) to technical product owners for immediate remediation.`);
+    } else if (criticalGaps.length > 0) {
+      statutoryDirectives.push(`Expedite closeout of ${criticalGaps.length} Critical severity gap(s) prior to next reporting milestone.`);
+    }
+    if (riskReductionPercentage < 30 && avgBase > 10) {
+      statutoryDirectives.push('Mandate end-to-end KMS encryption at rest and automated pseudonymization to increase risk attenuation.');
+    } else {
+      statutoryDirectives.push('Maintain quarterly continuous re-audit schedule and verify third-party Data Processing Agreements (Art. 28).');
+    }
+
+    const now = new Date();
+    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const snapshot = {
+      snapshotId: `SNAP-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+      timestampIso: now.toISOString(),
+      formattedTime,
+      reportingCycle: cycleLabel,
+      engineUsed: aiEngineUsed,
+      totalPias,
+      openGaps: openGaps.length,
+      criticalPiasCount: criticalPias.length,
+      highPiasCount: highPias.length,
+      averageResidualScore: avgScore,
+      averageBaseScore: avgBase,
+      riskReductionPercentage,
+      complianceRate,
+      portfolioRiskTier,
+      aiExecutiveBriefing,
+      statutoryDirectives,
+      topExposureSystems,
+      regulatoryReadiness: {
+        gdprArticle35: criticalPias.length === 0 ? 'Compliant' : 'Prior Consultation Pending',
+        nhsIgCompliance: openGaps.length <= 3 ? 'Substantial (Tier 1)' : 'Action Plan Required',
+        dpdpaReadiness: avgScore <= 9.0 ? 'Certified' : 'Under Assessment',
+        residualRiskTolerance: avgScore <= 9.0 ? 'Within Tolerance' : 'Exceeds Tolerance Threshold',
+      },
+    };
+
+    res.json({
+      success: true,
+      snapshot,
+      message: `Executive snapshot re-aggregated successfully via ${aiEngineUsed}.`,
+    });
+  } catch (err) {
+    console.error('[AI Snapshot Aggregation Error]', err);
+    res.status(500).json({ error: 'Failed to aggregate executive snapshot', details: String(err) });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -1482,12 +1621,26 @@ app.delete('/api/gaps/:id', (req, res) => {
 // ================= VITE / STATIC MIDDLEWARE =================
 
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+  const isBundled = typeof __filename !== 'undefined' && (__filename.includes('dist') || __filename.endsWith('.cjs'));
+  const isProd = process.env.NODE_ENV === 'production' || isBundled;
+
+  if (!isProd) {
+    try {
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (viteErr) {
+      console.warn('[PIA Platform] Vite middleware initialization warning:', viteErr);
+      const distPath = path.join(process.cwd(), 'dist');
+      if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath));
+        app.get('*', (req, res) => {
+          res.sendFile(path.join(distPath, 'index.html'));
+        });
+      }
+    }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

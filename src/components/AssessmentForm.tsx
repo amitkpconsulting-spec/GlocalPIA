@@ -298,7 +298,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({
   }
 
   return (
-    <div id="assessment-form-container" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div id="assessment-form-container" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       {/* Main Questionnaire Column */}
       <div className="lg:col-span-8 space-y-6">
         {/* Export Banner for Filled/Submitted/Signed Off Assessment */}
@@ -1184,14 +1184,19 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({
       </div>
 
       {/* Right Column: Dynamic Real-time Risk Calculation Sidebar */}
-      <div className="lg:col-span-4 space-y-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-5 text-zinc-200 sticky top-20">
-          <div className="border-b border-zinc-800 pb-3">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              Live Risk Calculation
-            </h3>
-            <p className="text-[11px] text-zinc-400 mt-0.5">Calculated based on IIAC / NHS step 1-4 methodology.</p>
+      <div className="lg:col-span-4 space-y-6 lg:self-start">
+        <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-750 rounded-2xl p-5 shadow-2xl shadow-black/80 space-y-5 text-zinc-200 sticky top-3 z-20 max-h-[calc(100vh-4.5rem)] overflow-y-auto scroll-pane">
+          <div className="border-b border-zinc-800 pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                Live Risk Calculation
+              </h3>
+              <p className="text-[11px] text-zinc-400 mt-0.5">Calculated based on IIAC / NHS step 1-4 methodology.</p>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 font-bold shrink-0 tracking-wider">
+              LIVE
+            </span>
           </div>
 
           {/* Final Score Gauge Box */}
@@ -1278,7 +1283,12 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({
           {/* CTA Buttons & Export Action */}
           <div className="pt-2 space-y-2.5">
             <div className="w-full">
-              <ExportButtonDropdown pia={activePiaForExport} variant="primary" className="w-full" />
+              <ExportButtonDropdown
+                pia={activePiaForExport}
+                variant="primary"
+                className="w-full"
+                dropdownPosition="top-right"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-2">

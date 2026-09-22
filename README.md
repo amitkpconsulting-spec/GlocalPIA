@@ -84,7 +84,7 @@ It integrates an **ICO/UK GDPR / EU GDPR quantitative risk matrix**, **7 industr
 
 ---
 
-## 🏗️ Architecture Overview 
+## 🏗️ Architecture Overview (from `PROMPT.md`)
 
 ```
                         ┌─────────────────────────────────────────┐
@@ -127,8 +127,11 @@ It integrates an **ICO/UK GDPR / EU GDPR quantitative risk matrix**, **7 industr
 ├── .env.example                # Configuration template with local fallback defaults
 ├── Dockerfile                  # Multi-stage container build instructions for air-gapped deployment
 ├── docker-compose.yml          # Container orchestration service configuration
-├── setup.bat                   # Automated Windows setup script
-├── start.bat                   # 1-Click Windows launcher script
+├── setup.bat                   # Automated Windows setup & environment gap fulfillment engine
+├── start.bat                   # 1-Click Windows launcher with port discovery & auto-browser launch
+├── Start.bat                   # Convenient root 1-click launcher alias
+├── scripts/
+│   └── wait-and-open.cjs       # Node.js server health detector & automatic browser launcher
 ├── schema.sql                  # Relational SQLite database schema
 ├── db_init.py                  # Python database initialization tool
 ├── app.py                      # Python backend server alternative wrapper
@@ -226,20 +229,49 @@ It integrates an **ICO/UK GDPR / EU GDPR quantitative risk matrix**, **7 industr
 
 ---
 
-### Method 2: Windows 1-Click Setup (`setup.bat` & `start.bat`)
-1. **Run Setup Script**:
-   ```cmd
-   setup.bat
-   ```
-   *Creates directories, checks Node.js/Python prerequisites, and installs dependencies.*
+### Method 2: Windows 1-Click Setup & Execution (`setup.bat`, `start.bat`, `Start.bat`)
 
-2. **Launch Server**:
-   ```cmd
-   start.bat
-   ```
-   *Resolves open ports, probes local LLM endpoints (Ollama, LM Studio, AnythingLLM), boots backend, and auto-opens `http://localhost:3000` in browser.*
+Local PIA includes a fully automated, self-healing execution suite engineered specifically for air-gapped Windows workstation environments.
 
-- **Default Admin Account**: Username: `admin` | Password: `admin`
+#### Step 1: Automated Environment & Dependency Setup (`setup.bat`)
+Double-click `setup.bat` or run from Command Prompt:
+```cmd
+setup.bat
+```
+What `setup.bat` does automatically:
+- **Prerequisite Detection**: Verifies Node.js and npm (offers automated `winget install OpenJS.NodeJS.LTS` on Windows 10/11 if missing). Checks optional Python/`.venv` tools.
+- **Storage & Directory Fulfillment**: Creates `data/`, `logs/`, `uploads/`, and `scripts/` directories if missing.
+- **Configuration & Store Generation**: Generates `.env` and initializes `data/pia_store.json` with a clean schema.
+- **Automated Dependency Installation**: Executes `npm install` with automatic peer-dependency resolution.
+- **High-Speed Production Compilation**: Automatically compiles the standalone Express backend and Vite client into `dist/server.cjs` and `dist/index.html`.
+- **Immediate Launch Option**: Prompts `Would you like to launch Local PIA and open browser now? [Y/n]` to launch the application and open your browser immediately.
+
+*Tip: For automated deployments or CI, run `setup.bat --no-pause` to bypass interactive prompts.*
+
+#### Step 2: 1-Click Launch & Zero-Race Browser Launch (`start.bat` / `Start.bat`)
+Double-click `Start.bat` (or `start.bat`) at any time to launch the platform:
+```cmd
+start.bat
+```
+Features of the launcher engine:
+- **Self-Healing Dependencies**: If `.env` or `node_modules` are missing, `start.bat` automatically triggers `setup.bat --no-pause` to heal the environment before starting.
+- **Dynamic Port Availability Detection**: Probes the configured port (default `3000`) via a native Node.js socket check. If port 3000 is occupied by another service, it automatically allocates the next available port (e.g. `3001`, `3002`) to prevent conflicts.
+- **Smart Readiness Poller (`scripts/wait-and-open.cjs`)**: Rather than relying on arbitrary sleep timers, a dedicated background poller pings `http://127.0.0.1:%PORT%/api/health`. The default web browser opens the **exact millisecond** the server answers with HTTP 200 OK, completely eliminating `ERR_CONNECTION_REFUSED` errors.
+- **Universal Fallback Launcher**: A secondary timer ensures the browser opens even in environments with restricted background execution.
+- **High-Speed Standalone Production Engine**: Automatically launches `dist/server.cjs` if compiled, or falls back seamlessly to `npm run dev` in dynamic development environments.
+
+#### Step 3: Default Credentials
+- **Administrator Role**: Username: `admin` | Password: `admin`
+- **Contributor Role**: Username: `contributor` | Password: `contributor`
+
+#### 💡 Troubleshooting Local Browser & Port Access
+- **Application URLs**:
+  - Primary URL: [http://localhost:3000](http://localhost:3000)
+  - Direct Loopback IP: [http://127.0.0.1:3000](http://127.0.0.1:3000)
+  - Health Endpoint: [http://localhost:3000/api/health](http://localhost:3000/api/health)
+- **If the browser does not open automatically**: Open your preferred browser (Chrome, Edge, Firefox, Brave) and navigate directly to the URL printed in the launcher window (e.g., `http://localhost:3000` or the dynamically allocated port).
+- **If Port 3000 is already in use**: `start.bat` automatically detects port collisions and selects an alternate available port (e.g., 3001). Check the console output for the assigned URL.
+- **To stop the server**: Focus the launcher command prompt window and press `Ctrl+C` or close the window.
 
 ---
 
@@ -275,43 +307,8 @@ PRAGMA foreign_keys = ON;
 
 ## 📜 License
 
-📄 License
+This project is licensed under the **MIT License**.
 
-
-Technoscope (Amit Kumar Pandey) Proprietary Source-Available License
-Copyright (c) 2026 Technoscope (Amit Kumar Pandey). All Rights Reserved.
-
-```
-
-
-This software and associated documentation files (the "Software") are the proprietary property of Technoscope (Amit Kumar Pandey).
-
-By downloading, accessing, or using the Software, you agree to the following terms:
-
-1. Grant of Limited License
-You are granted a limited, non-exclusive, non-transferable right to download, install, and evaluate the Software for internal, non-commercial testing purposes only.
-
-2. Absolute Ownership
-The Software is licensed, not sold. Technoscope (Amit Kumar Pandey) retains all intellectual property rights, title, and interest in and to the Software. You may not claim ownership of the Software, its source code, or any derivative works under any circumstances.
-
-3. Restrictions on Use
-Without prior explicit, written permission from the copyright holder, you MAY NOT:
-
-Use the Software for commercial purposes, including in production environments.
-
-Modify, alter, or create derivative works of the Software.
-
-Distribute, sub-license, host, or sell the Software to any third party.
-
-Remove or alter any copyright notices or proprietary markings.
-
-4. Consultancy, Advisory, and Commercial Use
-Any production deployment, commercial usage, or requirement for technical support, implementation advisory, and compliance consultancy must be obtained directly from Technoscope (Amit Kumar Pandey).
-
-To request commercial licensing, advisory services, or permission for restricted uses, please contact: [amitkp.consulting@gmail.com / www.technoscope.com]
-
-5. Limitation of Liability
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 Copyright (c) 2026 LOCAL-PIA / GlocalPIA Project
 ```

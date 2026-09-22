@@ -15,6 +15,18 @@ export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 
 export type GapStatus = 'Open' | 'In Progress' | 'Overdue' | 'Resolved';
 
+export type TabType =
+  | 'dashboard'
+  | 'executive'
+  | 'benchmarking'
+  | 'forecasting'
+  | 'directory'
+  | 'form'
+  | 'gaps'
+  | 'report'
+  | 'widgets'
+  | 'setup';
+
 export type WorkflowMode = 'frontend' | 'backend';
 
 export type UserRole = 'admin' | 'frontend_user';
@@ -83,7 +95,49 @@ export type TargetRegulatoryFramework =
   | 'DPDP Act 2023 (India)'
   | 'US CCPA/CPRA & State Laws'
   | 'ISO/IEC 42001 (AI Management)'
-  | 'NIST AI RMF 1.0';
+  | 'NIST AI RMF 1.0'
+  | 'FCA Operational Resilience'
+  | 'PCI-DSS v4.0'
+  | 'BCBS 239 Risk Data Aggregation'
+  | 'PRA Operational Resilience'
+  | 'FCA Travel Rule'
+  | 'FATF Recommendation 16'
+  | 'PRA Rulebook (Liquidity)'
+  | 'Basel III LCR'
+  | 'Money Laundering Regulations 2017'
+  | 'ICC UCP 600'
+  | 'PCI-DSS v4.0 Level 1'
+  | 'FCA Branch Access Standards'
+  | 'MiFID II Art 16(6)'
+  | 'FCA SYSC 9'
+  | 'ISO 27001:2022'
+  | 'Special Category Biometric Policy Rule'
+  | 'BS 7858 Security Screening'
+  | 'PRA Rulebook FSCS Protection'
+  | 'FCA SUP 16'
+  | 'EU GDPR'
+  | 'LMA Syndicated Loan Documentation Standard'
+  | 'UK SAMLA 2018'
+  | 'OFAC Regulations'
+  | 'EU 6AMLD'
+  | 'JMLSG Guidance Part I'
+  | 'Swiss FADP'
+  | 'FCA COBS 9 Suitability'
+  | 'FCA MCOB (Mortgages)'
+  | 'Open Banking Regulations'
+  | 'Visa Core Rules & Chargeback Guides'
+  | 'SRA Accounts Rules'
+  | 'FCA Client Assets (CASS)'
+  | 'FCA Financial Crime Guide'
+  | 'FATF Recommendations'
+  | 'Bills of Exchange Act 1882'
+  | 'Pay.UK ICS Rules'
+  | 'Dormant Assets Act 2022'
+  | 'Administration of Estates Act'
+  | 'EU CBPR2 Regulation 2019/518'
+  | 'FCA PSRs 2017'
+  | 'FCA Model Risk Guidance'
+  | (string & {});
 
 export interface RegulatoryTailoringConfig {
   selectedFrameworks: TargetRegulatoryFramework[];
