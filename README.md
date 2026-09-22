@@ -1,4 +1,4 @@
-# Local PIA (GlocalPIA) — Privacy Impact Assessment & Governance Engine
+# Global Local PIA (GlocalPIA) — Privacy Impact Assessment & Governance Engine
 
 > **Zero-Cloud, Air-Gapped Privacy Impact Assessment (PIA) & Data Governance Platform**  
 > *Dual-ID Lineage Audit Engine, 7-Sector Dynamic Rules, Local LLM Discovery, Deterministic Compliance Matrix, and SQLite Relational Store*
